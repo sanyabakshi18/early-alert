@@ -12,6 +12,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import "./App.css";
+import ResultsDashboard from "./ResultsDashboard";
 
 const symptomOptions = [
   "Chest discomfort",
@@ -34,6 +35,7 @@ function App() {
   const [improving, setImproving] = useState("");
   const [details, setDetails] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submittedData, setSubmittedData] = useState(null);
 
   // Add or remove a symptom
   const handleSymptomChange = (symptom) => {
@@ -69,21 +71,35 @@ function App() {
     };
 
     // Display collected data in the browser console
-    console.log("Early Alert - User Information:", userData);
-
-    setSubmitted(true);
+    setSubmittedData(userData);
+setSubmitted(true);
   };
 
   const resetForm = () => {
-    setSymptoms([]);
-    setDuration("");
-    setSeverity("");
-    setContext("");
-    setImproving("");
-    setDetails("");
-    setSubmitted(false);
-  };
+  setSymptoms([]);
+  setDuration("");
+  setSeverity("");
+  setContext("");
+  setImproving("");
+  setDetails("");
 
+  setSubmittedData(null);
+  setSubmitted(false);
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+};
+// Show the separate Results Dashboard after submission
+if (submitted && submittedData) {
+  return (
+    <ResultsDashboard
+      data={submittedData}
+      onStartAgain={resetForm}
+    />
+  );
+}
   return (
     <div className="app">
 
