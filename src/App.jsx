@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Activity,
@@ -8,9 +7,8 @@ import {
   ArrowRight,
   CheckCircle2,
   AlertTriangle,
-  Clock,
-  RotateCcw,
 } from "lucide-react";
+
 import "./App.css";
 import ResultsDashboard from "./ResultsDashboard";
 
@@ -34,10 +32,10 @@ function App() {
   const [context, setContext] = useState("");
   const [improving, setImproving] = useState("");
   const [details, setDetails] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
   const [submittedData, setSubmittedData] = useState(null);
 
-  // Add or remove a symptom
   const handleSymptomChange = (symptom) => {
     setSymptoms((previous) =>
       previous.includes(symptom)
@@ -46,9 +44,22 @@ function App() {
     );
   };
 
-  // Collect the user's answers
-  const handleSubmit = (event) => {
+  const resetForm = () => {
+    setSymptoms([]);
+    setDuration("");
+    setSeverity("");
+    setContext("");
+    setImproving("");
+    setDetails("");
+    setLoading(false);
+    setApiError("");
+    setSubmittedData(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    setApiError("");
 
     if (
       symptoms.length === 0 ||
@@ -57,59 +68,65 @@ function App() {
       !context ||
       !improving
     ) {
-      alert("Please complete all required fields.");
+      setApiError("Please complete all required symptom assessment fields.");
       return;
     }
 
-    const userData = {
-      symptoms,
-      duration,
-      severity,
-      context,
-      improving,
-      additionalDetails: details,
-    };
+    setLoading(true);
 
-    // Display collected data in the browser console
-    setSubmittedData(userData);
-setSubmitted(true);
+    try {
+      // This endpoint selects a real row from the cleaned dataset on the
+      // backend and runs the existing trained model on that row.
+      const response = await fetch("http://127.0.0.1:5000/demo-predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error ||
+            "The cardiovascular dataset demonstration could not be completed."
+        );
+      }
+
+      setSubmittedData({
+        symptoms,
+        duration,
+        severity,
+        context,
+        improving,
+        additionalDetails: details,
+        modelResult: result,
+      });
+    } catch (error) {
+      console.error("Dataset demonstration error:", error);
+      setApiError(
+        `${error.message} Check that Flask is running and the cleaned CSV is in the expected location.`
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const resetForm = () => {
-  setSymptoms([]);
-  setDuration("");
-  setSeverity("");
-  setContext("");
-  setImproving("");
-  setDetails("");
+  if (submittedData) {
+    return (
+      <ResultsDashboard data={submittedData} onStartAgain={resetForm} />
+    );
+  }
 
-  setSubmittedData(null);
-  setSubmitted(false);
-
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth",
-  });
-};
-// Show the separate Results Dashboard after submission
-if (submitted && submittedData) {
-  return (
-    <ResultsDashboard
-      data={submittedData}
-      onStartAgain={resetForm}
-    />
-  );
-}
   return (
     <div className="app">
-
-      {/* NAVIGATION BAR */}
       <nav className="navbar">
         <a href="#" className="brand">
           <div className="brand-icon">
             <HeartPulse size={25} />
           </div>
-          <span>Early<span className="brand-accent">Alert</span></span>
+          <span>
+            Early<span className="brand-accent">Alert</span>
+          </span>
         </a>
 
         <div className="nav-links">
@@ -122,7 +139,6 @@ if (submitted && submittedData) {
         </a>
       </nav>
 
-      {/* LANDING PAGE */}
       <section className="hero">
         <div className="hero-content">
           <div className="eyebrow">
@@ -136,9 +152,9 @@ if (submitted && submittedData) {
           </h1>
 
           <p>
-            Your health matters. Share what you are experiencing
-            and get an understandable overview of your symptoms
-            and guidance on when to seek professional medical care.
+            Share your symptoms and receive an educational overview of the
+            information you provided, alongside a separate cardiovascular
+            machine-learning demonstration using a dataset record.
           </p>
 
           <a href="#symptom-form" className="primary-button">
@@ -146,7 +162,7 @@ if (submitted && submittedData) {
           </a>
 
           <div className="trust-points">
-            <span><ShieldCheck size={16} /> Privacy-conscious</span>
+            <span><ShieldCheck size={16} /> Awareness-focused</span>
             <span><CheckCircle2 size={16} /> Easy to understand</span>
           </div>
         </div>
@@ -174,255 +190,194 @@ if (submitted && submittedData) {
         </div>
       </section>
 
-      {/* ABOUT SECTION */}
       <section className="about-section" id="about">
         <div className="section-heading">
           <span className="section-label">HOW IT WORKS</span>
           <h2>Your health awareness journey</h2>
-          <p>Three simple steps to understand the information you provide.</p>
+          <p>Three simple steps to understand the information provided.</p>
         </div>
 
         <div className="steps">
           <div className="step-card">
             <div className="step-icon"><Activity /></div>
             <h3>01. Share Symptoms</h3>
-            <p>Select the symptoms you are experiencing.</p>
+            <p>Select the symptoms you want to include in the assessment.</p>
           </div>
-
           <div className="step-card">
             <div className="step-icon"><Stethoscope /></div>
-            <h3>02. Provide Context</h3>
-            <p>Answer questions about duration and circumstances.</p>
+            <h3>02. Provide Information</h3>
+            <p>Answer a few simple questions about your symptoms.</p>
           </div>
-
           <div className="step-card">
             <div className="step-icon"><ShieldCheck /></div>
-            <h3>03. Understand</h3>
-            <p>Receive understandable information and appropriate guidance.</p>
+            <h3>03. View Results</h3>
+            <p>Review symptom observations and a separate ML demonstration.</p>
           </div>
         </div>
       </section>
 
-      {/* SYMPTOM FORM */}
       <section className="form-section" id="symptom-form">
         <div className="section-heading">
           <span className="section-label">SYMPTOM ASSESSMENT</span>
           <h2>Tell us what you are experiencing</h2>
-          <p>Answer the following questions to provide relevant context.</p>
+          <p>Complete the sections below. No medical test codes are required.</p>
         </div>
 
-        {submitted ? (
-          <div className="success-card">
-            <CheckCircle2 size={48} color="#15966c" />
-
-            <h2>Information submitted!</h2>
-            <p>
-              Your responses have been collected in this prototype.
-              They are not yet being analysed by a medical ML model.
+        <form className="symptom-form" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <h3>1. Select your symptoms</h3>
+            <p className="field-description">
+              Select all the symptoms you want to include.
             </p>
-
-            <div className="submitted-info">
-              <strong>Symptoms selected:</strong>
-              <p>{symptoms.join(", ")}</p>
-
-              <strong>Duration:</strong>
-              <p>{duration}</p>
-
-              <strong>Context:</strong>
-              <p>{context}</p>
+            <div className="symptom-grid">
+              {symptomOptions.map((symptom) => (
+                <label
+                  key={symptom}
+                  className={`symptom-option ${
+                    symptoms.includes(symptom) ? "selected" : ""
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={symptoms.includes(symptom)}
+                    onChange={() => handleSymptomChange(symptom)}
+                  />
+                  <span className="custom-checkbox">
+                    {symptoms.includes(symptom) ? "✓" : ""}
+                  </span>
+                  {symptom}
+                </label>
+              ))}
             </div>
-
-            <div className="notice">
-              <AlertTriangle size={20} />
-              <p>
-                This prototype does not diagnose medical conditions.
-                If you experience severe or potentially emergency
-                symptoms, seek immediate medical attention rather
-                than waiting for an online assessment.
-              </p>
-            </div>
-
-            <button className="primary-button" onClick={resetForm}>
-              <RotateCcw size={17} /> Start Again
-            </button>
+            <p className="selection-count">
+              {symptoms.length} symptoms selected
+            </p>
           </div>
-        ) : (
-          <form className="symptom-form" onSubmit={handleSubmit}>
 
-            {/* SYMPTOM SELECTION */}
-            <div className="form-group">
-              <h3>1. Select your symptoms</h3>
-              <p className="field-description">
-                Select all the symptoms that apply.
-              </p>
+          <div className="form-divider" />
 
-              <div className="symptom-grid">
-                {symptomOptions.map((symptom) => (
-                  <label
-                    key={symptom}
-                    className={`symptom-option ${
-                      symptoms.includes(symptom) ? "selected" : ""
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={symptoms.includes(symptom)}
-                      onChange={() => handleSymptomChange(symptom)}
-                    />
-                    <span className="custom-checkbox">
-                      {symptoms.includes(symptom) ? "✓" : ""}
-                    </span>
-                    {symptom}
-                  </label>
-                ))}
-              </div>
+          <div className="form-group">
+            <h3>2. How long have you experienced these symptoms?</h3>
+            <select value={duration} onChange={(e) => setDuration(e.target.value)} required>
+              <option value="">Select duration</option>
+              <option>Less than an hour</option>
+              <option>A few hours</option>
+              <option>One to two days</option>
+              <option>Several days</option>
+              <option>More than a week</option>
+            </select>
+          </div>
 
-              <p className="selection-count">
-                {symptoms.length} symptoms selected
-              </p>
+          <div className="form-divider" />
+
+          <div className="form-group">
+            <h3>3. How would you describe the symptoms?</h3>
+            <div className="radio-options">
+              {["Mild", "Moderate", "Severe"].map((item) => (
+                <label key={item} className="radio-option">
+                  <input
+                    type="radio"
+                    name="severity"
+                    value={item}
+                    checked={severity === item}
+                    onChange={(e) => setSeverity(e.target.value)}
+                    required
+                  />
+                  {item}
+                </label>
+              ))}
             </div>
+          </div>
 
-            <div className="form-divider"></div>
+          <div className="form-divider" />
 
-            {/* DURATION */}
-            <div className="form-group">
-              <h3>2. How long have you experienced these symptoms?</h3>
+          <div className="form-group">
+            <h3>4. When do you experience these symptoms?</h3>
+            <select value={context} onChange={(e) => setContext(e.target.value)} required>
+              <option value="">Select an option</option>
+              <option>During physical activity</option>
+              <option>After physical activity</option>
+              <option>While resting</option>
+              <option>During stressful situations</option>
+              <option>At different times</option>
+            </select>
+          </div>
 
-              <select
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                required
-              >
-                <option value="">Select duration</option>
-                <option>Less than an hour</option>
-                <option>A few hours</option>
-                <option>One to two days</option>
-                <option>Several days</option>
-                <option>More than a week</option>
-              </select>
+          <div className="form-divider" />
+
+          <div className="form-group">
+            <h3>5. Have the symptoms improved?</h3>
+            <div className="radio-options">
+              {[
+                "Yes, they have improved",
+                "No, they have not improved",
+                "They come and go",
+              ].map((item) => (
+                <label key={item} className="radio-option">
+                  <input
+                    type="radio"
+                    name="improving"
+                    value={item}
+                    checked={improving === item}
+                    onChange={(e) => setImproving(e.target.value)}
+                    required
+                  />
+                  {item}
+                </label>
+              ))}
             </div>
+          </div>
 
-            <div className="form-divider"></div>
+          <div className="form-divider" />
 
-            {/* SEVERITY */}
-            <div className="form-group">
-              <h3>3. How would you describe the symptoms?</h3>
+          <div className="form-group">
+            <h3>6. Additional information (optional)</h3>
+            <p className="field-description">
+              Add any other context you want included in the assessment.
+            </p>
+            <textarea
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              placeholder="Additional information..."
+              rows="4"
+            />
+          </div>
 
-              <div className="radio-options">
-                {["Mild", "Moderate", "Severe"].map((item) => (
-                  <label key={item} className="radio-option">
-                    <input
-                      type="radio"
-                      name="severity"
-                      value={item}
-                      checked={severity === item}
-                      onChange={(e) => setSeverity(e.target.value)}
-                      required
-                    />
-                    {item}
-                  </label>
-                ))}
-              </div>
+          {apiError && (
+            <div className="form-notice" role="alert">
+              <AlertTriangle size={20} />
+              <p>{apiError}</p>
             </div>
+          )}
 
-            <div className="form-divider"></div>
+          <div className="form-notice">
+            <ShieldCheck size={20} />
+            <p>
+              EarlyAlert is an educational prototype. It does not diagnose
+              medical conditions or estimate your personal cardiovascular
+              risk. The ML result shown later is generated from a separate
+              dataset record, not from your answers.
+            </p>
+          </div>
 
-            {/* CONTEXT */}
-            <div className="form-group">
-              <h3>4. When do you experience these symptoms?</h3>
-
-              <select
-                value={context}
-                onChange={(e) => setContext(e.target.value)}
-                required
-              >
-                <option value="">Select an option</option>
-                <option>During physical activity</option>
-                <option>After physical activity</option>
-                <option>While resting</option>
-                <option>During stressful situations</option>
-                <option>At different times</option>
-              </select>
-            </div>
-
-            <div className="form-divider"></div>
-
-            {/* IMPROVEMENT */}
-            <div className="form-group">
-              <h3>5. Have the symptoms improved?</h3>
-
-              <div className="radio-options">
-                {[
-                  "Yes, they have improved",
-                  "No, they have not improved",
-                  "They come and go",
-                ].map((item) => (
-                  <label key={item} className="radio-option">
-                    <input
-                      type="radio"
-                      name="improving"
-                      value={item}
-                      checked={improving === item}
-                      onChange={(e) => setImproving(e.target.value)}
-                      required
-                    />
-                    {item}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="form-divider"></div>
-
-            {/* ADDITIONAL INFORMATION */}
-            <div className="form-group">
-              <h3>6. Additional information (optional)</h3>
-              <p className="field-description">
-                Is there anything else you would like to mention?
-              </p>
-
-              <textarea
-                value={details}
-                onChange={(e) => setDetails(e.target.value)}
-                placeholder="Describe any additional information..."
-                rows="4"
-              />
-            </div>
-
-            <div className="form-notice">
-              <ShieldCheck size={20} />
-              <p>
-                Your information is used for this demonstration.
-                This prototype does not send it to a server or provide
-                a medical diagnosis.
-              </p>
-            </div>
-
-            <button type="submit" className="submit-button">
-              Submit Information <ArrowRight size={18} />
-            </button>
-
-          </form>
-        )}
+          <button type="submit" className="submit-button" disabled={loading}>
+            {loading ? "Running demonstration..." : "Submit Information"}
+            {!loading && <ArrowRight size={18} />}
+          </button>
+        </form>
       </section>
 
-      {/* FOOTER */}
       <footer>
         <div className="brand footer-brand">
           <HeartPulse size={23} />
           <span>Early<span className="brand-accent">Alert</span></span>
         </div>
-
-        <p>
-          Promoting early health awareness through technology.
-        </p>
-
+        <p>Promoting early health awareness through technology.</p>
         <small>
           Educational prototype only. Not a substitute for professional
           medical advice, diagnosis or treatment.
         </small>
       </footer>
-
     </div>
   );
 }

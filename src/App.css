@@ -576,3 +576,45 @@ footer small {
     font-size: 26px;
   }
 }
+/* Cardiovascular model input fields */
+.cardio-input-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.cardio-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cardio-field span {
+  font-weight: 600;
+}
+
+.cardio-field input,
+.cardio-field select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d5dce5;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.cardio-field small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.submit-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+@media (max-width: 650px) {
+  .cardio-input-grid {
+    grid-template-columns: 1fr;
+  }
+}
